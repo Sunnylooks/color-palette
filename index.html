@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaThief - Minimalist Color Palette & Eyedropper Tool</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            850: '#151518',
+                            950: '#09090b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Color Thief Library (Official unpkg Package) -->
+    <script src="https://unpkg.com/colorthief@3/dist/umd/color-thief.global.js"></script>
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="flex flex-col selection:bg-zinc-700 selection:text-white">
+
+<!-- APP LAYOUT (always visible) -->
+<main id="app-main" class="flex-1 min-h-0 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col">
+        <div id="app-grid" class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start centered-mode">
+
+            <!-- LEFT COLUMN: Settings Only (image input is in the hero empty state) -->
+            <div class="lg:col-span-6 flex flex-col gap-3 pr-0.5">
+                
+
+                <!-- SOURCE IMAGE WORKSPACE -->
+                <div class="glass-panel rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl shrink-0">
+                    <div class="flex items-center justify-between shrink-0">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                            <i class="fa-regular fa-image"></i> Gambar Sumber
+                        </span>
+                        <span id="img-dimensions" class="text-[11px] font-mono text-zinc-500">Siap</span>
+                    </div>
+
+                    <!-- Inspector Dropzone & Zoom Canvas Container -->
+                    <div id="dropzone" class="inspector-container relative w-full rounded-xl border border-dashed border-zinc-700 bg-zinc-900/60 hover:bg-zinc-900/90 flex flex-col items-center justify-center cursor-pointer overflow-hidden group">
+                        
+                        <!-- Upload Placeholder -->
+                        <div id="upload-placeholder" class="flex flex-col items-center justify-center p-6 text-center">
+                            <div class="w-14 h-14 rounded-2xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center mb-3 text-zinc-400 group-hover:text-zinc-200 group-hover:scale-105 transition shadow-lg">
+                                <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                            </div>
+                            <p class="text-sm font-medium text-zinc-300 mb-1">Tarik & lepas gambar atau <span class="text-purple-400 hover:underline">pilih file</span></p>
+                            <p class="text-xs text-zinc-500">PNG, JPG, WEBP</p>
+                        </div>
+
+                        <!-- Image Preview & Zoom Container -->
+                        <div id="preview-container" class="hidden absolute inset-0 w-full h-full bg-zinc-950 flex items-center justify-center overflow-auto p-2">
+                            <div id="zoom-wrapper" class="relative transition-transform duration-150 origin-center flex items-center justify-center">
+                                <img id="source-img" class="max-h-full max-w-full object-contain rounded-lg cursor-crosshair select-none" alt="Source Image" crossOrigin="anonymous" />
+                            </div>
+                        </div>
+
+                        <!-- Zoom Controls Toolbar -->
+                        <div id="zoom-toolbar" class="hidden absolute top-2.5 right-2.5 z-20 flex items-center gap-1 bg-zinc-950/80 backdrop-blur-md border border-zinc-800 p-1 rounded-xl shadow-xl">
+                            <button id="btn-zoom-out" class="w-6 h-6 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-[10px] flex items-center justify-center transition" title="Zoom Out (-)">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <span id="zoom-level-text" class="text-[10px] font-mono text-zinc-300 px-1 font-semibold">100%</span>
+                            <button id="btn-zoom-in" class="w-6 h-6 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-[10px] flex items-center justify-center transition" title="Zoom In (+)">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                            <button id="btn-zoom-reset" class="w-6 h-6 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-[10px] flex items-center justify-center transition" title="Reset Zoom">
+                                <i class="fa-solid fa-rotate-right text-[9px]"></i>
+                            </button>
+                            <div class="h-3 w-px bg-zinc-800 mx-0.5"></div>
+                            <button id="btn-focus-mode" class="w-6 h-6 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 text-[10px] flex items-center justify-center transition border border-purple-500/30" title="Inspeksi Layar Penuh">
+                                <i class="fa-solid fa-expand text-[9px]"></i>
+                            </button>
+                        </div>
+
+                        <input type="file" id="file-input" class="hidden" accept="image/*">
+                    </div>
+
+                    <!-- URL Loader & Action Control Buttons -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative flex-1 min-w-[140px]">
+                            <i class="fa-solid fa-link absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500"></i>
+                            <input type="text" id="url-input" placeholder="Tempel URL gambar..." class="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition truncate">
+                        </div>
+                        <button id="btn-load-url" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium rounded-lg border border-zinc-700 transition shrink-0">
+                            Muat
+                        </button>
+
+                        <div class="h-4 w-px bg-zinc-800/80 mx-0.5 shrink-0"></div>
+
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button id="btn-change-img" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 hover:text-white transition flex items-center gap-1.5 shadow-sm" title="Ganti Gambar">
+                                <i class="fa-solid fa-arrow-rotate-left text-[10px] text-zinc-400"></i>
+                                <span>Ganti</span>
+                            </button>
+                            <button id="btn-clear-img" class="px-2.5 py-1.5 rounded-lg bg-red-950/30 hover:bg-red-950/80 border border-red-900/40 hover:border-red-700/80 text-xs text-red-300 hover:text-red-100 transition flex items-center gap-1.5 shadow-sm" title="Hapus Gambar">
+                                <i class="fa-solid fa-trash-can text-[10px] text-red-400"></i>
+                                <span>Hapus</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- EXTRACTION SETTINGS CARD -->
+                <div id="settings-card" class="hidden glass-panel rounded-2xl p-3.5 flex flex-col gap-3 shadow-xl shrink-0">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-xs"></i> Pengaturan Ekstraksi
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span id="color-count-badge" class="px-2 py-0.5 rounded bg-zinc-800 text-[11px] font-mono text-purple-300 font-semibold border border-zinc-700">6 Warna</span>
+                        </div>
+                    </div>
+
+                    <!-- Palette Count Slider -->
+                    <div class="flex flex-col gap-1">
+                        <div class="flex justify-between items-center text-xs text-zinc-400">
+                            <span>Target Warna Palet</span>
+                            <span class="font-mono text-zinc-200 font-semibold"><span id="color-count-val">6</span> Warna</span>
+                        </div>
+                        <input type="range" id="palette-slider" min="1" max="30" value="6" step="1" class="w-full">
+                        <div class="flex justify-between text-[10px] text-zinc-500 font-mono" id="slider-labels">
+                            <span>1</span>
+                            <span>5</span>
+                            <span>10</span>
+                            <span>20</span>
+                            <span id="max-label-val">30</span>
+                        </div>
+                        <p id="slider-hint-text" class="text-[10px] text-zinc-500 italic mt-0.5 hidden">Slider dapat diatur sesuai jumlah warna unik terdeteksi.</p>
+                    </div>
+
+                    <!-- Format Switcher -->
+                    <div class="flex flex-col gap-1.5 pt-2 border-t border-zinc-800/80">
+                        <span class="text-[11px] text-zinc-400 font-medium">Format Utama Copy Value</span>
+                        <div class="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800" id="format-toggle">
+                            <button data-format="hex" class="flex-1 py-1.5 rounded-lg text-xs font-mono font-medium transition bg-zinc-800 text-white shadow-sm">HEX</button>
+                            <button data-format="rgb" class="flex-1 py-1.5 rounded-lg text-xs font-mono font-medium transition text-zinc-400 hover:text-zinc-200">RGB</button>
+                            <button data-format="hsl" class="flex-1 py-1.5 rounded-lg text-xs font-mono font-medium transition text-zinc-400 hover:text-zinc-200">HSL</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Dominant Color, Harmony Ribbon & Swatches Grid (50% Width) -->
+            <div id="results-column" class="hidden lg:col-span-6 flex flex-col gap-3">
+
+                <!-- WARNA DOMINAN UTAMA CARD -->
+                <div id="dominant-card" class="rounded-2xl p-4 shadow-xl transition-all duration-300 flex flex-col justify-between border border-white/10 relative overflow-hidden shrink-0 min-h-[140px] gap-3 bg-zinc-900/60">
+                    <div id="dominant-empty-state" class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 text-center p-4">
+                        <i class="fa-solid fa-eye-dropper text-zinc-600 text-2xl"></i>
+                        <p class="text-xs text-zinc-500">Muat gambar untuk melihat warna dominan</p>
+                    </div>
+                    <div id="dominant-content" class="hidden flex flex-col justify-between gap-3 h-full">
+                    <div class="flex flex-wrap items-center justify-between gap-2 z-10">
+                        <span id="dominant-badge" class="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-black/20 backdrop-blur-md">
+                            Warna Dominan Utama
+                        </span>
+                        <button id="btn-copy-dominant-rgb" class="px-2.5 py-1 rounded-xl bg-black/20 hover:bg-black/30 backdrop-blur-md text-[11px] font-mono font-medium transition flex items-center gap-1.5 shadow-sm border border-white/10">
+                            <i class="fa-regular fa-copy text-[10px]"></i>
+                            <span id="dominant-rgb-text">rgb(211, 204, 192)</span>
+                        </button>
+                    </div>
+
+                    <div class="my-1.5 z-10">
+                        <h2 id="dominant-hex-text" class="text-3xl sm:text-4xl font-mono font-extrabold tracking-tight cursor-pointer inline-block hover:opacity-80 transition" title="Klik untuk menyalin HEX">
+                            #D3CCC0
+                        </h2>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[11px] font-mono font-medium z-10 opacity-80">
+                        <span id="dominant-hsl-text">hsl(38, 18%, 79%)</span>
+                        <span id="dominant-lum-text">Luminance: 0.61</span>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- HARMONY RIBBON CARD -->
+                <div class="glass-panel rounded-2xl p-3 shadow-xl flex flex-col gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center justify-between text-[10px] font-mono tracking-wider text-zinc-400 uppercase font-semibold gap-2">
+                        <span>Harmony Ribbon</span>
+                    </div>
+                    <div id="harmony-ribbon" class="h-7 w-full rounded-full overflow-hidden flex shadow-inner border border-zinc-700/50">
+                        <!-- Ribbon items injected dynamically -->
+                    </div>
+                </div>
+
+                <!-- EXTRACTED SWATCHES CONTAINER (SCROLLABLE GRID) -->
+                <div class="glass-panel rounded-2xl p-4 shadow-xl flex flex-col gap-2.5">
+                    <div class="flex flex-wrap items-center justify-between shrink-0 gap-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                            <i class="fa-solid fa-swatchbook text-xs"></i> Hasil Swatch Palet
+                        </span>
+                        <span id="unique-detected-badge" class="hidden px-2 py-0.5 rounded bg-zinc-800 text-[11px] font-mono text-purple-300 font-semibold border border-zinc-700"></span>
+                    </div>
+
+                    <!-- Scrollable Grid Area (Cards retain normal compact size) -->
+                    <div id="swatches-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 auto-rows-min min-h-[120px]">
+                        <!-- Swatches injected dynamically -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- HOVER EYEDROPPER TOOLTIP -->
+    <div id="hover-eyedropper-tooltip" class="pointer-events-none fixed hidden z-[9999] flex flex-col items-center gap-1.5 p-2 bg-zinc-950/95 border border-zinc-700/90 rounded-2xl shadow-2xl backdrop-blur-md transition-opacity duration-75">
+        <div class="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-white/80 shadow-md">
+            <canvas id="magnifier-canvas" width="11" height="11" class="w-full h-full"></canvas>
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-2.5 h-2.5 border-2 border-red-500/90 rounded-sm"></div>
+            </div>
+        </div>
+        <div class="flex flex-col items-center">
+            <span id="hover-hex-code" class="text-xs font-mono font-bold text-zinc-100 leading-none">#FFFFFF</span>
+            <span id="hover-rgb-code" class="text-[9px] font-mono text-zinc-400 leading-none mt-1">rgb(255, 255, 255)</span>
+        </div>
+        <div class="text-[9px] text-purple-400 uppercase font-semibold tracking-wider flex items-center gap-1">
+            <i class="fa-solid fa-mouse-pointer text-[8px]"></i> Klik untuk Menyalin
+        </div>
+    </div>
+
+    <!-- FULLSCREEN FOCUS INSPECTION MODAL -->
+    <div id="focus-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col hidden">
+        <div class="h-14 border-b border-zinc-800 px-6 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-expand text-purple-400 text-sm"></i>
+                <span class="text-sm font-semibold text-zinc-200">Inspeksi Presisi Layar Penuh</span>
+            </div>
+            <button id="btn-close-focus" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition">
+                Tutup (Esc)
+            </button>
+        </div>
+        <div id="focus-image-container" class="flex-1 overflow-auto flex items-center justify-center p-8 cursor-crosshair">
+            <img id="focus-source-img" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none" alt="Focus Inspection" crossOrigin="anonymous" />
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- App logic -->
+    <script src="app.js"></script>
+</body>
+</html>
