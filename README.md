@@ -36,6 +36,3 @@ python -m http.server 8000
 
 Vanilla HTML/CSS/JS, Tailwind via CDN, Font Awesome, ColorThief, Inter + JetBrains Mono.
 
-## License
-
-MIT
