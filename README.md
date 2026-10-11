@@ -1,4 +1,4 @@
-# ChromaThief
+# Color Palette
 
 Minimalist color palette extraction tool. Drop an image, get the dominant color,
 a harmony ribbon, and a copyable swatch palette (HEX / RGB / HSL).
