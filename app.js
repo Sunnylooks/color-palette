@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let colorThief;
             try {
-                const CT = window.ColorThief?.default || window.ColorThief || ColorThief;
+                const CT = (window.ColorThief && window.ColorThief.default) || window.ColorThief || ColorThief;
                 colorThief = new CT();
             } catch (e) {
                 console.warn("ColorThief loading fallback ready:", e);
